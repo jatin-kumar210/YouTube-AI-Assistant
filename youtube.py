@@ -1,106 +1,179 @@
-from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
+from youtube_transcript_api import (
+    YouTubeTranscriptApi,
+    TranscriptsDisabled,
+    NoTranscriptFound,
+    IpBlocked,
+    RequestBlocked,
+)
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
+from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
 from langchain_core.prompts import PromptTemplate
 
 
-# YoutubeTranscriptApi → used to fetch transcripts/subtitles from YouTube videos.
-# TranscriptsDisabled → an exception/error class that you can catch when a video doesn't have transcripts available.
-
-
-# --------------------------------------------------
-# STEP 1: INDEXING
-# --------------------------------------------------
+# ==========================================================
+# STEP 1: VIDEO ID
+# ==========================================================
 
 video_id = "yCA5Wzdkfag"
 
+
+print("=" * 60)
+print("YOUTUBE AI ASSISTANT - RAG PIPELINE")
+print("=" * 60)
+
+
+# ==========================================================
+# STEP 2: FETCH TRANSCRIPT
+# ==========================================================
+
+print("\n[1/7] Fetching YouTube transcript...")
+
 try:
+    youtube_api = YouTubeTranscriptApi()
 
-    # if you dont care which language, this returns the best one.
-    transcript_data = YouTubeTranscriptApi().fetch(video_id)
+    # Let the API select the best available transcript.
+    # Do not restrict the language.
+    transcript_data = youtube_api.fetch(video_id)
 
-    # flatten it to plain text
+    # Convert transcript to plain text
     transcript = " ".join(
-        chunk.text for chunk in transcript_data
+        chunk.text
+        for chunk in transcript_data
     )
 
-    print("Transcript fetched successfully!")
-    print("Transcript length:", len(transcript))
+    if not transcript.strip():
+        print("Transcript is empty.")
+        exit()
+
+    print("Transcript fetched successfully.")
+    print("Transcript length:", len(transcript), "characters")
 
 
 except TranscriptsDisabled:
-    print("No caption available for this video")
+    print("Transcripts are disabled for this video.")
+    print("Please try another video.")
     exit()
+
+
+except NoTranscriptFound:
+    print("No transcript was found for this video.")
+    print("Please try another video with captions.")
+    exit()
+
+
+except IpBlocked:
+    print("YouTube has blocked your IP address.")
+    print("Try another network or mobile hotspot.")
+    exit()
+
+
+except RequestBlocked:
+    print("YouTube blocked the transcript request.")
+    print("Try another network or try again later.")
+    exit()
+
 
 except Exception as e:
-    print("Error while fetching transcript:")
-    print(type(e).__name__)
-    print(e)
+    print("Unexpected error while fetching transcript.")
+    print("Error type:", type(e).__name__)
+    print("Error:", e)
     exit()
 
 
-# --------------------------------------------------
-# STEP 2: SPLIT
-# --------------------------------------------------
+# ==========================================================
+# STEP 3: TEXT SPLITTING
+# ==========================================================
+
+print("\n[2/7] Splitting transcript into chunks...")
 
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=1500,
     chunk_overlap=300
 )
 
-chunks = splitter.create_documents([transcript])
+chunks = splitter.create_documents(
+    [transcript]
+)
 
+print("Text splitting completed.")
 print("Number of chunks:", len(chunks))
 
 
-# --------------------------------------------------
-# STEP 3: EMBEDDING + VECTOR STORE
-# --------------------------------------------------
+# ==========================================================
+# STEP 4: MISTRAL EMBEDDINGS
+# ==========================================================
+
+print("\n[3/7] Creating Mistral embeddings...")
 
 embeddings = MistralAIEmbeddings(
     model="mistral-embed"
 )
+
+print("Mistral embedding model initialized.")
+
+
+# ==========================================================
+# STEP 5: FAISS VECTOR STORE
+# ==========================================================
+
+print("\n[4/7] Creating FAISS vector store...")
 
 vector_store = FAISS.from_documents(
     chunks,
     embeddings
 )
 
-print("Vector store created successfully!")
+print("FAISS vector store created successfully.")
 
 
-# --------------------------------------------------
-# STEP 4: RETRIEVER
-# --------------------------------------------------
+# ==========================================================
+# STEP 6: RETRIEVER
+# ==========================================================
+
+print("\n[5/7] Creating similarity retriever...")
 
 retriever = vector_store.as_retriever(
     search_type="similarity",
-    search_kwargs={"k": 5}
+    search_kwargs={
+        "k": 5
+    }
 )
 
+print("Retriever created successfully.")
+print("Search type: Similarity")
+print("Documents retrieved per question: 5")
 
-# --------------------------------------------------
-# STEP 5: MISTRAL LLM
-# --------------------------------------------------
+
+# ==========================================================
+# STEP 7: MISTRAL LLM
+# ==========================================================
+
+print("\n[6/7] Initializing Mistral LLM...")
 
 llm = ChatMistralAI(
     model="mistral-small-latest"
 )
 
+print("Mistral LLM initialized successfully.")
 
-# --------------------------------------------------
-# STEP 6: PROMPT
-# --------------------------------------------------
+
+# ==========================================================
+# PROMPT TEMPLATE
+# ==========================================================
 
 prompt = PromptTemplate(
     template="""
 You are a helpful assistant answering questions about a YouTube video.
 
-Use the provided context to answer the question.
+Use ONLY the provided context to answer the question.
+
+Do not use outside knowledge.
 
 Context:
 {context}
@@ -110,61 +183,112 @@ Question:
 
 Instructions:
 - Answer clearly and concisely.
-- Use information from the context.
+- Use information only from the provided context.
 - Do not make up information.
+- Do not assume information that is not present.
 - If the context does not contain enough information, say:
-  "I don't know based on the provided context."
+
+"I don't know based on the provided context."
 
 Answer:
 """,
-    input_variables=["context", "question"]
+    input_variables=[
+        "context",
+        "question"
+    ]
 )
 
 
-# --------------------------------------------------
-# STEP 7: ASK QUESTIONS
-# --------------------------------------------------
+# ==========================================================
+# SYSTEM READY
+# ==========================================================
+
+print("\n[7/7] RAG system ready.")
+
+print("=" * 60)
+print("RAG SYSTEM READY")
+print("=" * 60)
+
+print("\nAsk questions about the video.")
+print("Type 'exit' to quit.")
+
+
+# ==========================================================
+# QUESTION-ANSWER LOOP
+# ==========================================================
 
 while True:
 
-    question = input("\nAsk a question about the video (type 'exit' to quit): ")
+    question = input(
+        "\nAsk a question about the video: "
+    )
 
-    if question.lower() == "exit":
+    # Exit
+    if question.lower().strip() == "exit":
         print("Chat ended.")
         break
 
-
-    # --------------------------------------------------
-    # STEP 8: RETRIEVE RELEVANT DOCUMENTS
-    # --------------------------------------------------
-
-    results = retriever.invoke(question)
+    # Empty question
+    if not question.strip():
+        print("Please enter a question.")
+        continue
 
 
-    # --------------------------------------------------
-    # STEP 9: PRINT RETRIEVED DOCUMENTS
-    # --------------------------------------------------
+    # ======================================================
+    # RETRIEVE RELEVANT DOCUMENTS
+    # ======================================================
 
-    print("\n------- Retrieved Documents -------")
+    print("\nSearching relevant transcript sections...")
 
-    for i, doc in enumerate(results):
+    try:
+        results = retriever.invoke(question)
 
-        print(f"\n--- Result {i + 1} ---")
-        print(doc.page_content)
+    except Exception as e:
+        print("Error during retrieval.")
+        print("Error type:", type(e).__name__)
+        print("Error:", e)
+        continue
 
 
-    # --------------------------------------------------
-    # STEP 10: COMBINE DOCUMENTS
-    # --------------------------------------------------
-
-    context = "\n\n".join(
-        doc.page_content for doc in results
+    print(
+        "Retrieved",
+        len(results),
+        "relevant documents."
     )
 
 
-    # --------------------------------------------------
-    # STEP 11: CREATE FINAL PROMPT
-    # --------------------------------------------------
+    # ======================================================
+    # DISPLAY RETRIEVED DOCUMENTS
+    # ======================================================
+
+    print("\n" + "-" * 60)
+    print("RETRIEVED DOCUMENTS")
+    print("-" * 60)
+
+    for i, doc in enumerate(results):
+
+        print(
+            f"\n--- Result {i + 1} ---"
+        )
+
+        print(
+            doc.page_content
+        )
+
+
+    # ======================================================
+    # COMBINE DOCUMENTS
+    # ======================================================
+
+    context = "\n\n".join(
+        doc.page_content
+        for doc in results
+    )
+
+
+    # ======================================================
+    # CREATE FINAL PROMPT
+    # ======================================================
 
     final_prompt = prompt.format(
         context=context,
@@ -172,16 +296,35 @@ while True:
     )
 
 
-    # --------------------------------------------------
-    # STEP 12: GENERATE FINAL ANSWER
-    # --------------------------------------------------
+    # ======================================================
+    # GENERATE ANSWER
+    # ======================================================
 
-    answer = llm.invoke(final_prompt)
+    print("\nGenerating answer...")
+
+    try:
+
+        answer = llm.invoke(
+            final_prompt
+        )
+
+    except Exception as e:
+
+        print("Error while generating answer.")
+        print("Error type:", type(e).__name__)
+        print("Error:", e)
+
+        continue
 
 
-    # --------------------------------------------------
-    # STEP 13: PRINT FINAL ANSWER
-    # --------------------------------------------------
+    # ======================================================
+    # DISPLAY FINAL ANSWER
+    # ======================================================
 
-    print("\n------- FINAL ANSWER -------")
+    print("\n" + "=" * 60)
+    print("FINAL ANSWER")
+    print("=" * 60)
+
     print(answer.content)
+
+    print("=" * 60)``
