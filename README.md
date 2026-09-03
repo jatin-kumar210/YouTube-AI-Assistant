@@ -1,87 +1,131 @@
-# YouTube AI Assistant 
+# YouTube AI Assistant
 
-(live:https://readmemd-pnt3rj954vhyu8efywognn.streamlit.app/)
+An AI-powered YouTube video question-answering application built using **Retrieval-Augmented Generation (RAG)**.
+
+YouTube AI Assistant allows users to provide a YouTube video URL and ask questions about its content. The application extracts the video's transcript, processes it into chunks, creates embeddings, retrieves the most relevant information using FAISS, and generates context-aware answers using Mistral AI.
+
+---
+
+## Navigation
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [How It Works](#how-it-works)
+- [Tech Stack](#tech-stack)
+- [RAG Pipeline](#rag-pipeline)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Environment Setup](#environment-setup)
+- [Usage](#usage)
+- [Example Questions](#example-questions)
+- [Use Cases](#use-cases)
+- [Limitations](#limitations)
+- [Future Improvements](#future-improvements)
+- [Security](#security)
+- [Author](#author)
+
+---
+
+## Project Preview
+
 <p align="center">
-  <strong>AI-powered question answering for YouTube videos using Retrieval-Augmented Generation (RAG)</strong>
+  <img src="assets/screenshot.png" alt="YouTube AI Assistant" width="900">
 </p>
 
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#usage">Usage</a>
-</p>
+---
+
+## Live Demo
+
+Try the application here:
+
+**Live Demo:**  
+https://readmemd-pnt3rj954vhyu8efywognn.streamlit.app/
+
+---
+
+## GitHub Repository
+
+**GitHub:**  
+https://github.com/jatin-kumar210/YouTube-AI-Assistant
 
 ---
 
 ## Overview
 
-YouTube AI Assistant is a Retrieval-Augmented Generation (RAG) application
-that allows users to interact with YouTube videos through natural-language
-questions.
+Watching long YouTube videos to find specific information can be time-consuming.
 
-The application extracts the video's transcript, divides it into meaningful
-chunks, generates vector embeddings, and stores them in a FAISS vector
-database. When a user asks a question, the system retrieves the most relevant
-parts of the transcript and provides them to a Mistral AI language model to
-generate a contextual answer.
+YouTube AI Assistant solves this problem by allowing users to interact with a video's transcript using natural language.
 
-The application is built with Python and Streamlit and provides an interactive
-interface for processing videos and asking questions.
+Instead of manually searching through a long video, users can simply ask questions such as:
+
+> "What is the main topic discussed in this video?"
+
+or
+
+> "Explain the concept mentioned in the second half of the video."
+
+The system retrieves the most relevant transcript sections and uses them as context for the language model.
+
+This makes the answers more relevant and reduces the chances of the model generating information that is not present in the video.
 
 ---
-
-
 
 ## Features
 
-- YouTube transcript extraction
-- Natural-language question answering
-- Retrieval-Augmented Generation (RAG)
-- Semantic similarity search with FAISS
+- YouTube video URL input
+- Automatic YouTube video ID extraction
+- Transcript extraction
+- Transcript preprocessing
+- Intelligent text chunking
 - Mistral AI embeddings
-- Mistral AI language model
+- FAISS vector database
+- Similarity-based document retrieval
+- Context-aware answer generation
 - Interactive Streamlit interface
-- Context-aware responses
-- Conversation history
-- Environment-based API key configuration
+- Chat-style question answering
+- Retrieved context inspection
+- Error handling for unavailable transcripts
+- Secure API key management using environment variables
 
 ---
 
-## Architecture
+# Architecture
 
 ```text
-                    YouTube Video
-                         │
-                         ▼
-                 Extract Video ID
-                         │
-                         ▼
-                  Fetch Transcript
-                         │
-                         ▼
-                   Text Processing
-                         │
-                         ▼
-                  Text Chunking
-                         │
-                         ▼
-               Mistral AI Embeddings
-                         │
-                         ▼
-                   FAISS Index
-                         │
-                         │
-User Question ──────────┤
-                         ▼
-                Similarity Retrieval
-                         │
-                         ▼
-                 Relevant Context
-                         │
-                         ▼
-                 Mistral AI LLM
-                         │
-                         ▼
-                   Final Answer
+                YouTube Video URL
+                       |
+                       v
+               Extract Video ID
+                       |
+                       v
+              Fetch Video Transcript
+                       |
+                       v
+              Convert to Plain Text
+                       |
+                       v
+             Recursive Text Splitter
+                       |
+                       v
+              Create Text Chunks
+                       |
+                       v
+              Mistral Embeddings
+                       |
+                       v
+                 FAISS Vector Store
+                       |
+                       v
+                Similarity Retriever
+                       |
+                       v
+                 Relevant Chunks
+                       |
+                       v
+                 Context + Query
+                       |
+                       v
+               Mistral LLM
+                       |
+                       v
+                  Final Answer
