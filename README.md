@@ -32,13 +32,7 @@ interface for processing videos and asking questions.
 
 ---
 
-## Demo
 
-Watch the application in action:
-
-**[▶ Watch Demo](demo.mp4)**
-
----
 
 ## Features
 
