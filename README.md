@@ -1,6 +1,6 @@
-# YouTube AI Assistant (live:https://readmemd-pnt3rj954vhyu8efywognn.streamlit.app/)
+# YouTube AI Assistant 
 
-
+(live:https://readmemd-pnt3rj954vhyu8efywognn.streamlit.app/)
 <p align="center">
   <strong>AI-powered question answering for YouTube videos using Retrieval-Augmented Generation (RAG)</strong>
 </p>
